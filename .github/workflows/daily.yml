@@ -1,0 +1,34 @@
+name: Daily Crude Intel Report
+
+on:
+  schedule:
+    - cron: "0 11 * * *"
+  workflow_dispatch: {}
+
+permissions:
+  contents: write
+
+jobs:
+  run-pipeline:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - run: pip install -r requirements.txt
+
+      - run: python main.py
+        env:
+          EIA_API_KEY: ${{ secrets.EIA_API_KEY }}
+          NEWSAPI_KEY: ${{ secrets.NEWSAPI_KEY }}
+
+      - name: Commit updated data pool and report
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add data_pool.db reports/
+          git diff --cached --quiet || git commit -m "chore: daily report $(date -u +%Y-%m-%d)"
+          git push
